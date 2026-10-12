@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 public class AlgorithmComparison {
 
@@ -208,25 +207,36 @@ public class AlgorithmComparison {
         List<Future<Integer>> tasks = new ArrayList<>();
         int processed = 0;
 
-        try (ExecutorService executor = Executors.newFixedThreadPool(processors)) {
+        ExecutorService executor = Executors.newFixedThreadPool(processors);
+        try {
             for (Email email : messages) {
-                tasks.add(executor.submit(() -> TextPreprocessor.cleanText(email.getFullText()).length()));
+                tasks.add(executor.submit(
+                        () -> TextPreprocessor.cleanText(email.getFullText()).length()
+                ));
             }
+        } finally {
             executor.shutdown();
-            for (Future<Integer> task : tasks) {
-                try {
-                    task.get();
-                    processed++;
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } catch (ExecutionException e) {
-                    // Task error handled silently
-                }
+        }
+
+        for (Future<Integer> task : tasks) {
+            try {
+                task.get();
+                processed++;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (ExecutionException e) {
+                // Task error handled silently
             }
         }
 
         double timeMs = (System.nanoTime() - start) / 1_000_000.0;
-        return new Result("Parallel Processing", "Concurrency", "O(N / P)", timeMs, "Processed on " + processors + " threads (" + processed + " emails)");
+        return new Result(
+                "Parallel Processing",
+                "Concurrency",
+                "O(N / P)",
+                timeMs,
+                "Processed on " + processors + " threads (" + processed + " emails)"
+        );
     }
 
     private static void printResults(String userId, List<Email> userMessages, Set<String> detectedKeywords,

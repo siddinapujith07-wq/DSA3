@@ -9,19 +9,35 @@ public class ParallelEmailProcessor {
         if (emails == null || emails.isEmpty()) return;
 
         int threads = Runtime.getRuntime().availableProcessors();
-        try (ExecutorService executor = Executors.newFixedThreadPool(threads)) {
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+
+        try {
             for (Email email : emails) {
-                executor.submit(() -> TextPreprocessor.cleanText(email.getFullText()));
+                executor.submit(() ->
+                        TextPreprocessor.cleanText(email.getFullText())
+                );
             }
+
             executor.shutdown();
+
             if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                 executor.shutdownNow();
             }
+
         } catch (InterruptedException e) {
+            executor.shutdownNow();
             Thread.currentThread().interrupt();
+
+        } finally {
+            if (!executor.isShutdown()) {
+                executor.shutdown();
+            }
         }
 
-        System.out.printf("Parallel Processing: %d emails processed concurrently on %d CPU threads.%n",
-                emails.size(), threads);
+        System.out.printf(
+                "Parallel Processing: %d emails processed concurrently on %d CPU threads.%n",
+                emails.size(),
+                threads
+        );
     }
 }
